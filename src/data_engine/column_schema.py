@@ -2,9 +2,11 @@ import random
 from typing import Optional, Union
 from faker import Faker
 import numpy as np
+import pandas as pd
+import inspect
 
-from datatypes import Datatype
-from datatypes import (
+from data_engine.datatypes import Datatype
+from data_engine.datatypes import (
     StringType, 
     IntegerType,
     FloatType, 
@@ -43,16 +45,25 @@ class ColumnSchema:
             datatype = StringType()
         elif isinstance(datatype, str):
             # If a string is provided, we convert it to the corresponding Datatype class.
-            datatype = Datatype.get_class(datatype)(**datatype_kwargs)
+            datatype_class = Datatype.get_class(datatype.lower())
+            if datatype_class is None:
+                raise ValueError(f"Unknown datatype: {datatype}.")
+            # Filter out invalid arguments for the datatype class
+            valid_args = inspect.signature(datatype_class.__init__).parameters
+            filtered_kwargs = {k: v for k, v in datatype_kwargs.items() if k in valid_args}
+            
+            datatype = datatype_class(**filtered_kwargs)
         elif not isinstance(datatype, Datatype):
             raise TypeError(f"Invalid datatype: {datatype}. Expected a Datatype object or a string.")
         
         self.datatype = datatype
+        if completeness is None or pd.isna(completeness):
+            completeness = 1.0
         self.completeness = completeness
         self.generator_rule = generator_rule
         
     def __str__(self) -> str:
-        return f"ColumnSchema(name={self.name}, datatype={self.datatype}, length={self.length}, completeness={self.completeness}, attribute_domain={self.attribute_domain})"
+        return f"ColumnSchema({','.join(f'{k}={v}' for k, v in self.__dict__.items())})"
     
     def __repr__(self) -> str:
         return self.__str__()

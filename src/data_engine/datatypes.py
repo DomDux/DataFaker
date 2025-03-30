@@ -32,10 +32,11 @@ class Datatype:
     _registry: dict[str, Type["Datatype"]] = {}
 
     @classmethod
-    def register(cls, name: str):
+    def register(cls, *names: str):
         """Decorator to register subclasses."""
         def wrapper(subclass: Type["Datatype"]):
-            cls._registry[name] = subclass
+            for name in names:
+                cls._registry[name] = subclass
             return subclass
         return wrapper
 
@@ -57,6 +58,10 @@ class StringType(Datatype):
         Initializes the StringType object with a specified length.
         """
         super().__init__()
+        if length is None:
+            length = 10
+        if length <= 0:
+            raise ValueError("Length must be a positive integer.")
         self.length = length
 
     def generator_rule(self):
@@ -66,7 +71,7 @@ class StringType(Datatype):
         return ''.join(random.choices(string.ascii_letters + string.digits, k=self.length))
     
 
-@Datatype.register("int")
+@Datatype.register("int", "integer")
 class IntegerType(Datatype):
     """
     A class representing an integer data type.
@@ -76,8 +81,19 @@ class IntegerType(Datatype):
         Initializes the IntegerType object with a specified range.
         """
         super().__init__()
-        self.min_value = min_value
-        self.max_value = max_value
+        if min_value is None and max_value is None:
+            min_value = 0
+            max_value = 100
+        elif max_value is None and min_value is not None:
+            max_value = max(100+min_value, 100)
+        elif min_value is None and max_value is not None:
+            min_value = min(max_value-100, 0)
+        
+        if min_value >= max_value:
+            raise ValueError("min_value must be less than max_value.")
+        
+        self.min_value = int(min_value)
+        self.max_value = int(max_value)
 
     def generator_rule(self):
         """
@@ -96,6 +112,14 @@ class FloatType(Datatype):
         Initializes the FloatType object with a specified range.
         """
         super().__init__()
+        if min_value is None and max_value is None:
+            min_value = 0.0
+            max_value = 100.0
+        elif max_value is None and min_value is not None:
+            max_value = max(100.0+min_value, 100.0)
+        elif min_value is None and max_value is not None:
+            min_value = min(max_value-100.0, 0.0)
+        
         self.min_value = min_value
         self.max_value = max_value
 
